@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- QR Code Scanner Library -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -31,182 +33,272 @@
       </nav>
 
       <div class="system-status">
-        <div class="status-indicator online"></div>
+        <div class="status-indicator" id="device-status" style="background: #ef4444;"></div>
         <div>
-          <p class="status-title">Sensor / Engine</p>
-          <small class="status-desc">Calibrated & Ready</small>
+          <p class="status-title">Device Status</p>
+          <small class="status-desc" id="device-status-text">Not Connected</small>
         </div>
+      </div>
+
+      <div id="patient-info-sidebar" class="patient-card" style="display: none; margin-top: 20px; padding: 12px; background: var(--bg-surface-elevated); border-radius: var(--radius-md);">
+        <p class="patient-name" id="patient-name-display" style="font-weight: 600; margin-bottom: 4px;">-</p>
+        <small id="patient-details-display" style="color: var(--text-muted);">-</small>
       </div>
     </aside>
 
     <!-- Main Content Area -->
     <main class="main-content">
-      <!-- Top Header -->
-      <header class="top-nav">
-        <div class="header-titles">
-          <h1>Pelvic Range of Motion (ROM) Monitor</h1>
-          <p>Real-time anterior/posterior tilt, lateral inclination, and rotation analysis</p>
-        </div>
-        <div class="header-actions">
-          <button id="btn-recalibrate" class="btn btn-secondary">
-            <i class="fa-solid fa-arrows-rotate"></i> Recalibrate Zero
-          </button>
-          <button id="btn-toggle-tracking" class="btn btn-primary">
-            <i class="fa-solid fa-play"></i> Start Assessment
-          </button>
-        </div>
-      </header>
+      <!-- QR Scanner Modal -->
+      <div id="scanner-modal" class="modal active">
+        <div class="modal-content scanner-modal">
+          <div class="modal-header">
+            <h2><i class="fa-solid fa-qrcode"></i> Device Scanner</h2>
+            <p>Scan QR/Barcode to connect ESP32 device</p>
+          </div>
 
-      <!-- Key Metrics Row -->
-      <section class="metrics-grid">
-        <!-- Anterior / Posterior Tilt Card -->
-        <div class="metric-card">
-          <div class="card-header">
-            <span class="card-title">Sagittal Plane (Tilt)</span>
-            <span class="badge" id="badge-sagittal">Neutral</span>
-          </div>
-          <div class="card-body">
-            <div class="angle-display">
-              <span class="angle-number" id="val-sagittal">0.0</span>
-              <span class="angle-unit">°</span>
-            </div>
-            <div class="progress-bar-container">
-              <div class="progress-bar" id="bar-sagittal" style="width: 50%;"></div>
-            </div>
-            <div class="metric-footer">
-              <span>-30° (Posterior)</span>
-              <span>+30° (Anterior)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Lateral Tilt (Obliquity) Card -->
-        <div class="metric-card">
-          <div class="card-header">
-            <span class="card-title">Frontal Plane (Obliquity)</span>
-            <span class="badge" id="badge-frontal">Balanced</span>
-          </div>
-          <div class="card-body">
-            <div class="angle-display">
-              <span class="angle-number" id="val-frontal">0.0</span>
-              <span class="angle-unit">°</span>
-            </div>
-            <div class="progress-bar-container">
-              <div class="progress-bar" id="bar-frontal" style="width: 50%;"></div>
-            </div>
-            <div class="metric-footer">
-              <span>-20° (Left Drop)</span>
-              <span>+20° (Right Drop)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Transverse Rotation Card -->
-        <div class="metric-card">
-          <div class="card-header">
-            <span class="card-title">Transverse Plane (Rotation)</span>
-            <span class="badge" id="badge-rotation">Centered</span>
-          </div>
-          <div class="card-body">
-            <div class="angle-display">
-              <span class="angle-number" id="val-rotation">0.0</span>
-              <span class="angle-unit">°</span>
-            </div>
-            <div class="progress-bar-container">
-              <div class="progress-bar" id="bar-rotation" style="width: 50%;"></div>
-            </div>
-            <div class="metric-footer">
-              <span>-25° (Left)</span>
-              <span>+25° (Right)</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Visualization and Simulator Controls -->
-      <section class="visualizer-section">
-        <div class="panel visualizer-panel">
-          <div class="panel-header">
-            <h3><i class="fa-solid fa-cubes"></i> 3D Orientation Mock</h3>
-            <span class="subtext">Dynamic Visual Plane Feedback</span>
-          </div>
-          <div class="visualizer-stage">
-            <div class="pelvis-avatar" id="pelvis-visual">
-              <div class="avatar-ring ring-outer"></div>
-              <div class="avatar-plate">
-                <i class="fa-solid fa-compass"></i>
-                <span>Pelvic Base</span>
+          <div class="scanner-section">
+            <div id="scanner-video-container" class="scanner-video">
+              <video id="scanner-video" autoplay playsinline></video>
+              <div class="scanner-overlay">
+                <div class="scanner-box"></div>
               </div>
             </div>
+            <div id="qr-result" class="qr-result" style="display: none;"></div>
           </div>
-          <div class="legend">
-            <span><i class="fa-solid fa-circle" style="color: var(--primary);"></i> In Range (Normal)</span>
-            <span><i class="fa-solid fa-circle" style="color: var(--warning);"></i> Mild Deviation</span>
-            <span><i class="fa-solid fa-circle" style="color: var(--danger);"></i> Severe Tilt / Risk</span>
+
+          <div class="modal-actions">
+            <button id="btn-start-scan" class="btn btn-primary">
+              <i class="fa-solid fa-camera"></i> Start Camera
+            </button>
+            <button id="btn-manual-device" class="btn btn-secondary">
+              <i class="fa-solid fa-keyboard"></i> Enter Device ID Manually
+            </button>
+          </div>
+
+          <div id="manual-device-form" style="display: none; margin-top: 20px;">
+            <input type="text" id="manual-device-id" placeholder="Enter Device ID (e.g., ESP32-001)" class="input-field" />
+            <button id="btn-confirm-device" class="btn btn-primary full-width" style="margin-top: 10px;">
+              Confirm Device
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- Interactive Adjusters / Testing Panel -->
-        <div class="panel controls-panel">
-          <div class="panel-header">
-            <h3><i class="fa-solid fa-sliders"></i> Sensor Signal Adjuster</h3>
-            <span class="subtext">Simulate ROM Inputs</span>
+      <!-- Patient Registration Modal -->
+      <div id="patient-modal" class="modal" style="display: none;">
+        <div class="modal-content patient-modal">
+          <div class="modal-header">
+            <h2><i class="fa-solid fa-user-doctor"></i> Patient Registration</h2>
+            <p>Device: <strong id="device-id-display">-</strong></p>
           </div>
-          <form class="controls-form" onsubmit="event.preventDefault();">
-            <div class="input-group">
-              <label for="slider-sagittal">Sagittal Tilt: <span id="lbl-sagittal">0°</span></label>
-              <input type="range" id="slider-sagittal" min="-30" max="30" value="0" step="0.5" />
+
+          <form id="patient-form" class="patient-form" onsubmit="event.preventDefault();">
+            <div class="form-group">
+              <label for="patient-name">Patient Name *</label>
+              <input type="text" id="patient-name" class="input-field" placeholder="Full Name" required />
             </div>
 
-            <div class="input-group">
-              <label for="slider-frontal">Lateral Obliquity: <span id="lbl-frontal">0°</span></label>
-              <input type="range" id="slider-frontal" min="-20" max="20" value="0" step="0.5" />
+            <div class="form-group">
+              <label for="patient-gender">Gender *</label>
+              <select id="patient-gender" class="input-field" required>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
-            <div class="input-group">
-              <label for="slider-rotation">Axial Rotation: <span id="lbl-rotation">0°</span></label>
-              <input type="range" id="slider-rotation" min="-25" max="25" value="0" step="0.5" />
+            <div class="form-group">
+              <label for="patient-age">Age (years) *</label>
+              <input type="number" id="patient-age" class="input-field" placeholder="Age" min="1" max="120" required />
+            </div>
+
+            <div class="form-group">
+              <label for="patient-date">Assessment Date & Time</label>
+              <input type="datetime-local" id="patient-date" class="input-field" />
             </div>
 
             <div class="form-actions">
-              <button type="button" id="btn-save-record" class="btn btn-primary full-width">
-                <i class="fa-solid fa-floppy-disk"></i> Log Current Measurement
+              <button type="submit" class="btn btn-primary full-width">
+                <i class="fa-solid fa-check"></i> Start Assessment
               </button>
             </div>
           </form>
         </div>
-      </section>
+      </div>
 
-      <!-- History Table -->
-      <section class="history-section" id="history">
-        <div class="panel">
-          <div class="panel-header space-between">
-            <div>
-              <h3><i class="fa-solid fa-clipboard-list"></i> Recorded Trials</h3>
-              <span class="subtext">Past range of motion checkpoints</span>
-            </div>
-            <button id="btn-export-csv" class="btn btn-sm btn-outline">
-              <i class="fa-solid fa-file-export"></i> Export CSV
+      <!-- Dashboard (Hidden initially) -->
+      <div id="dashboard-content" style="display: none;">
+        <!-- Top Header -->
+        <header class="top-nav">
+          <div class="header-titles">
+            <h1>Pelvic Range of Motion (ROM) Monitor</h1>
+            <p>Real-time anterior/posterior tilt, lateral inclination, and rotation analysis</p>
+          </div>
+          <div class="header-actions">
+            <button id="btn-recalibrate" class="btn btn-secondary">
+              <i class="fa-solid fa-arrows-rotate"></i> Recalibrate Zero
+            </button>
+            <button id="btn-toggle-tracking" class="btn btn-primary">
+              <i class="fa-solid fa-play"></i> Start Assessment
+            </button>
+            <button id="btn-change-device" class="btn btn-outline">
+              <i class="fa-solid fa-plug"></i> Change Device
             </button>
           </div>
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Sagittal Tilt</th>
-                  <th>Lateral Obliquity</th>
-                  <th>Axial Rotation</th>
-                  <th>Clinical Verdict</th>
-                </tr>
-              </thead>
-              <tbody id="history-rows">
-                <!-- Dynamically populated rows -->
-              </tbody>
-            </table>
+        </header>
+
+        <!-- Key Metrics Row -->
+        <section class="metrics-grid">
+          <!-- Anterior / Posterior Tilt Card -->
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-title">Sagittal Plane (Tilt)</span>
+              <span class="badge" id="badge-sagittal">Neutral</span>
+            </div>
+            <div class="card-body">
+              <div class="angle-display">
+                <span class="angle-number" id="val-sagittal">0.0</span>
+                <span class="angle-unit">°</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-sagittal" style="width: 50%;"></div>
+              </div>
+              <div class="metric-footer">
+                <span>-30° (Posterior)</span>
+                <span>+30° (Anterior)</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+
+          <!-- Lateral Tilt (Obliquity) Card -->
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-title">Frontal Plane (Obliquity)</span>
+              <span class="badge" id="badge-frontal">Balanced</span>
+            </div>
+            <div class="card-body">
+              <div class="angle-display">
+                <span class="angle-number" id="val-frontal">0.0</span>
+                <span class="angle-unit">°</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-frontal" style="width: 50%;"></div>
+              </div>
+              <div class="metric-footer">
+                <span>-20° (Left Drop)</span>
+                <span>+20° (Right Drop)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transverse Rotation Card -->
+          <div class="metric-card">
+            <div class="card-header">
+              <span class="card-title">Transverse Plane (Rotation)</span>
+              <span class="badge" id="badge-rotation">Centered</span>
+            </div>
+            <div class="card-body">
+              <div class="angle-display">
+                <span class="angle-number" id="val-rotation">0.0</span>
+                <span class="angle-unit">°</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-rotation" style="width: 50%;"></div>
+              </div>
+              <div class="metric-footer">
+                <span>-25° (Left)</span>
+                <span>+25° (Right)</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Visualization and Simulator Controls -->
+        <section class="visualizer-section">
+          <div class="panel visualizer-panel">
+            <div class="panel-header">
+              <h3><i class="fa-solid fa-cubes"></i> 3D Orientation Mock</h3>
+              <span class="subtext">Dynamic Visual Plane Feedback</span>
+            </div>
+            <div class="visualizer-stage">
+              <div class="pelvis-avatar" id="pelvis-visual">
+                <div class="avatar-ring ring-outer"></div>
+                <div class="avatar-plate">
+                  <i class="fa-solid fa-compass"></i>
+                  <span>Pelvic Base</span>
+                </div>
+              </div>
+            </div>
+            <div class="legend">
+              <span><i class="fa-solid fa-circle" style="color: var(--primary);"></i> In Range (Normal)</span>
+              <span><i class="fa-solid fa-circle" style="color: var(--warning);"></i> Mild Deviation</span>
+              <span><i class="fa-solid fa-circle" style="color: var(--danger);"></i> Severe Tilt / Risk</span>
+            </div>
+          </div>
+
+          <!-- Interactive Adjusters / Testing Panel -->
+          <div class="panel controls-panel">
+            <div class="panel-header">
+              <h3><i class="fa-solid fa-sliders"></i> Sensor Signal Adjuster</h3>
+              <span class="subtext">Simulate ROM Inputs</span>
+            </div>
+            <form class="controls-form" onsubmit="event.preventDefault();">
+              <div class="input-group">
+                <label for="slider-sagittal">Sagittal Tilt: <span id="lbl-sagittal">0°</span></label>
+                <input type="range" id="slider-sagittal" min="-30" max="30" value="0" step="0.5" />
+              </div>
+
+              <div class="input-group">
+                <label for="slider-frontal">Lateral Obliquity: <span id="lbl-frontal">0°</span></label>
+                <input type="range" id="slider-frontal" min="-20" max="20" value="0" step="0.5" />
+              </div>
+
+              <div class="input-group">
+                <label for="slider-rotation">Axial Rotation: <span id="lbl-rotation">0°</span></label>
+                <input type="range" id="slider-rotation" min="-25" max="25" value="0" step="0.5" />
+              </div>
+
+              <div class="form-actions">
+                <button type="button" id="btn-save-record" class="btn btn-primary full-width">
+                  <i class="fa-solid fa-floppy-disk"></i> Log Current Measurement
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- History Table -->
+        <section class="history-section" id="history">
+          <div class="panel">
+            <div class="panel-header space-between">
+              <div>
+                <h3><i class="fa-solid fa-clipboard-list"></i> Recorded Trials</h3>
+                <span class="subtext">Past range of motion checkpoints</span>
+              </div>
+              <button id="btn-export-csv" class="btn btn-sm btn-outline">
+                <i class="fa-solid fa-file-export"></i> Export CSV
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Sagittal Tilt</th>
+                    <th>Lateral Obliquity</th>
+                    <th>Axial Rotation</th>
+                    <th>Clinical Verdict</th>
+                  </tr>
+                </thead>
+                <tbody id="history-rows">
+                  <!-- Dynamically populated rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
