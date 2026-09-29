@@ -10,8 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- QR Code Scanner Library -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -33,10 +31,10 @@
       </nav>
 
       <div class="system-status">
-        <div class="status-indicator" id="device-status" style="background: #ef4444;"></div>
+        <div class="status-indicator" id="device-status" style="background: #10b981;"></div>
         <div>
           <p class="status-title">Device Status</p>
-          <small class="status-desc" id="device-status-text">Not Connected</small>
+          <small class="status-desc" id="device-status-text">Ready</small>
         </div>
       </div>
 
@@ -48,54 +46,18 @@
 
     <!-- Main Content Area -->
     <main class="main-content">
-      <!-- QR Scanner Modal -->
-      <div id="scanner-modal" class="modal active">
-        <div class="modal-content scanner-modal">
-          <div class="modal-header">
-            <h2><i class="fa-solid fa-qrcode"></i> Device Scanner</h2>
-            <p>Scan QR/Barcode to connect ESP32 device</p>
-          </div>
-
-          <div class="scanner-section">
-            <div id="scanner-video-container" class="scanner-video">
-              <video id="scanner-video" autoplay playsinline></video>
-              <div class="scanner-overlay">
-                <div class="scanner-box"></div>
-              </div>
-            </div>
-            <div id="qr-result" class="qr-result" style="display: none;"></div>
-          </div>
-
-          <div class="modal-actions">
-            <button id="btn-start-scan" class="btn btn-primary">
-              <i class="fa-solid fa-camera"></i> Start Camera
-            </button>
-            <button id="btn-manual-device" class="btn btn-secondary">
-              <i class="fa-solid fa-keyboard"></i> Enter Device ID Manually
-            </button>
-          </div>
-
-          <div id="manual-device-form" style="display: none; margin-top: 20px;">
-            <input type="text" id="manual-device-id" placeholder="Enter Device ID (e.g., ESP32-001)" class="input-field" />
-            <button id="btn-confirm-device" class="btn btn-primary full-width" style="margin-top: 10px;">
-              Confirm Device
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- Patient Registration Modal -->
-      <div id="patient-modal" class="modal" style="display: none;">
+      <div id="patient-modal" class="modal active">
         <div class="modal-content patient-modal">
           <div class="modal-header">
             <h2><i class="fa-solid fa-user-doctor"></i> Patient Registration</h2>
-            <p>Device: <strong id="device-id-display">-</strong></p>
+            <p>Device: <strong id="device-id-display">PRD-0001</strong></p>
           </div>
 
           <form id="patient-form" class="patient-form" onsubmit="event.preventDefault();">
             <div class="form-group">
               <label for="patient-name">Patient Name *</label>
-              <input type="text" id="patient-name" class="input-field" placeholder="Full Name" required />
+              <input type="text" id="patient-name" class="input-field" placeholder="Full Name" required autofocus />
             </div>
 
             <div class="form-group">
@@ -114,8 +76,8 @@
             </div>
 
             <div class="form-group">
-              <label for="patient-date">Assessment Date & Time</label>
-              <input type="datetime-local" id="patient-date" class="input-field" />
+              <label for="patient-date">Assessment Date & Time *</label>
+              <input type="datetime-local" id="patient-date" class="input-field" required />
             </div>
 
             <div class="form-actions">
@@ -142,8 +104,8 @@
             <button id="btn-toggle-tracking" class="btn btn-primary">
               <i class="fa-solid fa-play"></i> Start Assessment
             </button>
-            <button id="btn-change-device" class="btn btn-outline">
-              <i class="fa-solid fa-plug"></i> Change Device
+            <button id="btn-change-patient" class="btn btn-outline">
+              <i class="fa-solid fa-user-plus"></i> New Patient
             </button>
           </div>
         </header>
@@ -241,7 +203,7 @@
           <div class="panel controls-panel">
             <div class="panel-header">
               <h3><i class="fa-solid fa-sliders"></i> Sensor Signal Adjuster</h3>
-              <span class="subtext">Simulate ROM Inputs</span>
+              <span class="subtext">Simulate or Live ROM Inputs</span>
             </div>
             <form class="controls-form" onsubmit="event.preventDefault();">
               <div class="input-group">
