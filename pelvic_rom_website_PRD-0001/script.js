@@ -1,6 +1,10 @@
+// ===== URL PARAMETER: Get Device ID from QR Code =====
+const params = new URLSearchParams(window.location.search);
+const DEVICE_ID_FROM_QR = params.get("device") || null;
+
 // State management
 let state = {
-  deviceId: null,
+  deviceId: DEVICE_ID_FROM_QR,
   patientData: null,
   sagittal: 0.0,
   frontal: 0.0,
@@ -22,7 +26,13 @@ const btnConfirmDevice = document.getElementById('btn-confirm-device');
 const manualDeviceForm = document.getElementById('manual-device-form');
 const manualDeviceInput = document.getElementById('manual-device-id');
 const scannerVideo = document.getElementById('scanner-video');
-const qrResult = document.getElementById('qr-result');
+
+// If device ID came from QR code URL, skip scanner and go straight to patient form
+if (DEVICE_ID_FROM_QR) {
+  setTimeout(() => {
+    processDeviceId(DEVICE_ID_FROM_QR);
+  }, 500);
+}
 
 // Start Camera for QR Scanning
 btnStartScan.addEventListener('click', async () => {
@@ -36,8 +46,8 @@ btnStartScan.addEventListener('click', async () => {
     btnStartScan.textContent = '📹 Camera Active...';
     scanQRCode();
   } catch (err) {
-    alert('Camera access denied or not available.');
-    console.error(err);
+    alert('Camera access denied or not available. Please enter Device ID manually.');
+    manualDeviceForm.style.display = 'block';
   }
 });
 
@@ -62,7 +72,12 @@ function scanQRCode() {
         if (state.videoStream) {
           state.videoStream.getTracks().forEach(track => track.stop());
         }
-        processDeviceId(code.data);
+        
+        // Extract device ID from QR code URL
+        // Expected format: https://...?device=PRD-0001
+        const url = new URL(code.data);
+        const deviceId = url.searchParams.get('device') || code.data;
+        processDeviceId(deviceId);
       }
     }
     requestAnimationFrame(scan);
@@ -101,6 +116,11 @@ function processDeviceId(deviceId) {
   const now = new Date();
   const dateString = now.toISOString().slice(0, 16);
   document.getElementById('patient-date').value = dateString;
+  
+  // Focus on name field
+  setTimeout(() => {
+    document.getElementById('patient-name').focus();
+  }, 100);
 }
 
 // ===== PATIENT REGISTRATION =====
@@ -113,6 +133,11 @@ patientForm.addEventListener('submit', (e) => {
   const patientGender = document.getElementById('patient-gender').value;
   const patientAge = document.getElementById('patient-age').value;
   const patientDate = document.getElementById('patient-date').value;
+  
+  if (!patientName || !patientGender || !patientAge) {
+    alert('Please fill in all required fields');
+    return;
+  }
   
   state.patientData = {
     name: patientName,
@@ -141,38 +166,61 @@ patientForm.addEventListener('submit', (e) => {
 let esp32WebSocket = null;
 
 function connectToESP32(deviceId) {
-  // Example WebSocket connection
-  // In production, replace with your ESP32's actual WebSocket endpoint
-  const wsUrl = `ws://esp32-${deviceId}.local:81/`;
+  // Example WebSocket connection for local ESP32
+  // Format: ws://esp32-PRD-0001.local:81/
+  // Or use: ws://192.168.x.x:81/ (replace with actual IP)
   
-  try {
-    esp32WebSocket = new WebSocket(wsUrl);
+  const wsUrls = [
+    `ws://esp32-${deviceId}.local:81/`,
+    `ws://esp32-${deviceId}:81/`
+  ];
+  
+  function attemptConnection(urls, index) {
+    if (index >= urls.length) {
+      console.log('WebSocket not available, using manual sliders');
+      return;
+    }
     
-    esp32WebSocket.onopen = () => {
-      console.log('Connected to ESP32:', deviceId);
-    };
-    
-    esp32WebSocket.onmessage = (event) => {
-      // Expected JSON: {"sagittal": 5.2, "frontal": 1.8, "rotation": -0.5}
-      const data = JSON.parse(event.data);
-      if (data.sagittal !== undefined) {
-        state.sagittal = parseFloat(data.sagittal);
-      }
-      if (data.frontal !== undefined) {
-        state.frontal = parseFloat(data.frontal);
-      }
-      if (data.rotation !== undefined) {
-        state.rotation = parseFloat(data.rotation);
-      }
-      updateUI();
-    };
-    
-    esp32WebSocket.onerror = (error) => {
-      console.log('WebSocket error (using manual mode):', error);
-    };
-  } catch (err) {
-    console.log('WebSocket not available, using manual sliders');
+    try {
+      const wsUrl = urls[index];
+      esp32WebSocket = new WebSocket(wsUrl);
+      
+      esp32WebSocket.onopen = () => {
+        console.log('Connected to ESP32:', deviceId);
+      };
+      
+      esp32WebSocket.onmessage = (event) => {
+        // Expected JSON: {"sagittal": 5.2, "frontal": 1.8, "rotation": -0.5}
+        try {
+          const data = JSON.parse(event.data);
+          if (data.sagittal !== undefined) {
+            state.sagittal = parseFloat(data.sagittal);
+          }
+          if (data.frontal !== undefined) {
+            state.frontal = parseFloat(data.frontal);
+          }
+          if (data.rotation !== undefined) {
+            state.rotation = parseFloat(data.rotation);
+          }
+          updateUI();
+        } catch (e) {
+          console.log('Invalid JSON from ESP32');
+        }
+      };
+      
+      esp32WebSocket.onerror = () => {
+        attemptConnection(urls, index + 1);
+      };
+      
+      esp32WebSocket.onclose = () => {
+        setTimeout(() => attemptConnection(urls, 0), 5000);
+      };
+    } catch (err) {
+      attemptConnection(urls, index + 1);
+    }
   }
+  
+  attemptConnection(wsUrls, 0);
 }
 
 // Send data to ESP32
@@ -295,9 +343,19 @@ btnToggleTracking.addEventListener('click', () => {
   }
 });
 
-// Save Measurement to Table with Timestamp
+// Save Measurement to Table with Full Timestamp
 btnSaveRecord.addEventListener('click', () => {
-  const timestamp = new Date().toLocaleString();
+  const now = new Date();
+  const timestamp = now.toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+  
   const verdict = getVerdict(state.sagittal, state.frontal);
   const entry = {
     time: timestamp,
@@ -320,25 +378,27 @@ btnSaveRecord.addEventListener('click', () => {
   historyRows.prepend(row);
 });
 
-// Export Log as CSV with Patient Info
+// Export Log as CSV with Complete Patient Info and Timestamps
 btnExportCSV.addEventListener('click', () => {
-  if (state.records.length === 0) {
-    alert('No data entries recorded to export.');
+  if (!state.patientData || state.records.length === 0) {
+    alert('Please record at least one measurement before exporting.');
     return;
   }
   
   let csvContent = "data:text/csv;charset=utf-8,";
   
-  // Add patient header
-  if (state.patientData) {
-    csvContent += `Patient Name,${state.patientData.name}\n`;
-    csvContent += `Gender,${state.patientData.gender}\n`;
-    csvContent += `Age,${state.patientData.age}\n`;
-    csvContent += `Device ID,${state.deviceId}\n`;
-    csvContent += `Assessment Date,${state.patientData.dateTime}\n\n`;
-  }
+  // Add patient header section
+  csvContent += `Patient Information\n`;
+  csvContent += `Patient Name,${state.patientData.name}\n`;
+  csvContent += `Gender,${state.patientData.gender}\n`;
+  csvContent += `Age,${state.patientData.age} years\n`;
+  csvContent += `Device ID,${state.deviceId}\n`;
+  csvContent += `Assessment Date,${state.patientData.dateTime}\n`;
+  csvContent += `Session Start,${state.patientData.startTime}\n`;
+  csvContent += `\n`;
+  csvContent += `Measurement Records\n`;
+  csvContent += `Timestamp,Sagittal Tilt (°),Lateral Obliquity (°),Axial Rotation (°),Clinical Verdict\n`;
   
-  csvContent += "Timestamp,SagittalTilt,LateralObliquity,AxialRotation,Verdict\n";
   state.records.forEach(r => {
     csvContent += `${r.time},${r.sagittal},${r.frontal},${r.rotation},"${r.verdict}"\n`;
   });
@@ -346,7 +406,11 @@ btnExportCSV.addEventListener('click', () => {
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement('a');
   link.setAttribute('href', encodedUri);
-  link.setAttribute('download', `pelvic_rom_${state.deviceId}_${new Date().getTime()}.csv`);
+  
+  const timestamp = new Date().getTime();
+  const filename = `pelvic_rom_${state.deviceId}_${state.patientData.name.replace(/\s+/g, '_')}_${timestamp}.csv`;
+  link.setAttribute('download', filename);
+  
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
