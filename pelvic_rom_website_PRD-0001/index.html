@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pelvic ROM Assessment System</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts & Font Awesome for icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-bone"></i></div>
+        <div class="brand-text">
+          <h2>PelviMetrics</h2>
+          <span>ROM Tracking Suite</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+        <a href="#assessment" class="nav-item"><i class="fa-solid fa-ruler-combined"></i> Assessment</a>
+        <a href="#history" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> History Log</a>
+        <a href="#protocols" class="nav-item"><i class="fa-solid fa-book-medical"></i> Clinical Standards</a>
+      </nav>
+
+      <div class="system-status">
+        <div class="status-indicator online"></div>
+        <div>
+          <p class="status-title">Sensor / Engine</p>
+          <small class="status-desc">Calibrated & Ready</small>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="top-nav">
+        <div class="header-titles">
+          <h1>Pelvic Range of Motion (ROM) Monitor</h1>
+          <p>Real-time anterior/posterior tilt, lateral inclination, and rotation analysis</p>
+        </div>
+        <div class="header-actions">
+          <button id="btn-recalibrate" class="btn btn-secondary">
+            <i class="fa-solid fa-arrows-rotate"></i> Recalibrate Zero
+          </button>
+          <button id="btn-toggle-tracking" class="btn btn-primary">
+            <i class="fa-solid fa-play"></i> Start Assessment
+          </button>
+        </div>
+      </header>
+
+      <!-- Key Metrics Row -->
+      <section class="metrics-grid">
+        <!-- Anterior / Posterior Tilt Card -->
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-title">Sagittal Plane (Tilt)</span>
+            <span class="badge" id="badge-sagittal">Neutral</span>
+          </div>
+          <div class="card-body">
+            <div class="angle-display">
+              <span class="angle-number" id="val-sagittal">0.0</span>
+              <span class="angle-unit">°</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar" id="bar-sagittal" style="width: 50%;"></div>
+            </div>
+            <div class="metric-footer">
+              <span>-30° (Posterior)</span>
+              <span>+30° (Anterior)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lateral Tilt (Obliquity) Card -->
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-title">Frontal Plane (Obliquity)</span>
+            <span class="badge" id="badge-frontal">Balanced</span>
+          </div>
+          <div class="card-body">
+            <div class="angle-display">
+              <span class="angle-number" id="val-frontal">0.0</span>
+              <span class="angle-unit">°</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar" id="bar-frontal" style="width: 50%;"></div>
+            </div>
+            <div class="metric-footer">
+              <span>-20° (Left Drop)</span>
+              <span>+20° (Right Drop)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transverse Rotation Card -->
+        <div class="metric-card">
+          <div class="card-header">
+            <span class="card-title">Transverse Plane (Rotation)</span>
+            <span class="badge" id="badge-rotation">Centered</span>
+          </div>
+          <div class="card-body">
+            <div class="angle-display">
+              <span class="angle-number" id="val-rotation">0.0</span>
+              <span class="angle-unit">°</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar" id="bar-rotation" style="width: 50%;"></div>
+            </div>
+            <div class="metric-footer">
+              <span>-25° (Left)</span>
+              <span>+25° (Right)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Visualization and Simulator Controls -->
+      <section class="visualizer-section">
+        <div class="panel visualizer-panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-cubes"></i> 3D Orientation Mock</h3>
+            <span class="subtext">Dynamic Visual Plane Feedback</span>
+          </div>
+          <div class="visualizer-stage">
+            <div class="pelvis-avatar" id="pelvis-visual">
+              <div class="avatar-ring ring-outer"></div>
+              <div class="avatar-plate">
+                <i class="fa-solid fa-compass"></i>
+                <span>Pelvic Base</span>
+              </div>
+            </div>
+          </div>
+          <div class="legend">
+            <span><i class="fa-solid fa-circle" style="color: var(--primary);"></i> In Range (Normal)</span>
+            <span><i class="fa-solid fa-circle" style="color: var(--warning);"></i> Mild Deviation</span>
+            <span><i class="fa-solid fa-circle" style="color: var(--danger);"></i> Severe Tilt / Risk</span>
+          </div>
+        </div>
+
+        <!-- Interactive Adjusters / Testing Panel -->
+        <div class="panel controls-panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-sliders"></i> Sensor Signal Adjuster</h3>
+            <span class="subtext">Simulate ROM Inputs</span>
+          </div>
+          <form class="controls-form" onsubmit="event.preventDefault();">
+            <div class="input-group">
+              <label for="slider-sagittal">Sagittal Tilt: <span id="lbl-sagittal">0°</span></label>
+              <input type="range" id="slider-sagittal" min="-30" max="30" value="0" step="0.5" />
+            </div>
+
+            <div class="input-group">
+              <label for="slider-frontal">Lateral Obliquity: <span id="lbl-frontal">0°</span></label>
+              <input type="range" id="slider-frontal" min="-20" max="20" value="0" step="0.5" />
+            </div>
+
+            <div class="input-group">
+              <label for="slider-rotation">Axial Rotation: <span id="lbl-rotation">0°</span></label>
+              <input type="range" id="slider-rotation" min="-25" max="25" value="0" step="0.5" />
+            </div>
+
+            <div class="form-actions">
+              <button type="button" id="btn-save-record" class="btn btn-primary full-width">
+                <i class="fa-solid fa-floppy-disk"></i> Log Current Measurement
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- History Table -->
+      <section class="history-section" id="history">
+        <div class="panel">
+          <div class="panel-header space-between">
+            <div>
+              <h3><i class="fa-solid fa-clipboard-list"></i> Recorded Trials</h3>
+              <span class="subtext">Past range of motion checkpoints</span>
+            </div>
+            <button id="btn-export-csv" class="btn btn-sm btn-outline">
+              <i class="fa-solid fa-file-export"></i> Export CSV
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Sagittal Tilt</th>
+                  <th>Lateral Obliquity</th>
+                  <th>Axial Rotation</th>
+                  <th>Clinical Verdict</th>
+                </tr>
+              </thead>
+              <tbody id="history-rows">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
