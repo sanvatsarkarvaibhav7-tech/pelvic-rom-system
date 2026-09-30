@@ -5,147 +5,204 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pelvic ROM System</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
-    fieldset { margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; border: 1px solid #ccc; }
-    legend { font-weight: bold; }
-    .form-group { margin-bottom: 0.8rem; display: flex; flex-direction: column; }
-    .form-group label { margin-bottom: 0.3rem; font-weight: 500; }
-    input, select, button { padding: 0.5rem; font-size: 1rem; border-radius: 4px; border: 1px solid #bbb; }
-    button { cursor: pointer; background: #0066cc; color: white; border: none; margin-top: 0.5rem; }
-    button:disabled { background: #aaa; cursor: not-allowed; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #f2f2f2; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 750px; margin: 2rem auto; padding: 0 1rem; color: #333; }
+    h1 { margin-bottom: 0.2rem; }
+    .badge { display: inline-block; background: #eef2ff; color: #3730a3; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: 600; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    fieldset { margin-bottom: 1.5rem; padding: 1.2rem; border-radius: 8px; border: 1px solid #d1d5db; background: #fafafa; }
+    legend { font-weight: bold; padding: 0 0.4rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; margin-bottom: 0.8rem; }
+    .form-group label { margin-bottom: 0.3rem; font-weight: 600; font-size: 0.9rem; }
+    input, select, button { padding: 0.6rem; font-size: 1rem; border-radius: 6px; border: 1px solid #ccc; }
+    input[readonly] { background-color: #f3f4f6; color: #555; }
+    .btn-primary { background: #2563eb; color: white; border: none; cursor: pointer; font-weight: 600; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: #059669; color: white; border: none; cursor: pointer; font-weight: 600; margin-top: 0.8rem; }
+    .btn-secondary:hover { background: #047857; }
+    .live-display { font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0; padding: 0.8rem; background: #fff; border: 1px dashed #cbd5e1; border-radius: 6px; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
+    th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; font-size: 0.95rem; }
+    th { background: #f8fafc; font-weight: 600; }
   </style>
 </head>
 <body>
 
-  <h1>Pelvic ROM System</h1>
+  <h1>Pelvic ROM Assessment</h1>
+  <div class="badge" id="device-badge">Device: Not Detected</div>
 
-  <!-- Patient Details Section -->
+  <!-- Patient Registration -->
   <fieldset>
     <legend>Patient Details</legend>
-    <div class="form-group">
-      <label for="name">Name:</label>
-      <input type="text" id="name" placeholder="Full Name" required />
+    <div class="grid">
+      <div class="form-group">
+        <label for="name">Patient Name *</label>
+        <input type="text" id="name" placeholder="Full Name" required />
+      </div>
+      <div class="form-group">
+        <label for="gender">Gender *</label>
+        <select id="gender" required>
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
     </div>
-
-    <div class="form-group">
-      <label for="gender">Gender:</label>
-      <select id="gender">
-        <option value="">Select Gender</option>
-        <option value="Male">Male</option>
-        <option value="Female">Female</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label for="age">Age:</label>
-      <input type="number" id="age" min="0" max="120" placeholder="e.g. 35" />
-    </div>
-
-    <div class="form-group">
-      <label for="date">Date:</label>
-      <!-- Automatically populated with today's date -->
-      <input type="date" id="date" readonly />
+    <div class="grid">
+      <div class="form-group">
+        <label for="age">Age *</label>
+        <input type="number" id="age" min="1" max="120" placeholder="e.g. 45" required />
+      </div>
+      <div class="form-group">
+        <label for="datetime">Date & Time</label>
+        <input type="text" id="datetime" readonly />
+      </div>
     </div>
   </fieldset>
 
-  <!-- Device Connection Section -->
+  <!-- Device Status & Live Angle -->
   <fieldset>
-    <legend>Device Connection</legend>
-    <p>Status: <span id="device-status" style="font-weight: bold; color: #cc0000;">Disconnected</span></p>
-    <button type="button" id="connect-btn">Connect Device (Bluetooth)</button>
-    <p>Current Reading: <span id="current-reading">--</span>°</p>
+    <legend>Device & Motion Sensor</legend>
+    <p>Connection: <span id="conn-status" style="color: #dc2626; font-weight: 600;">Disconnected</span></p>
+    <div class="grid">
+      <button type="button" class="btn-primary" id="connect-ws">Connect Wi-Fi / WebSocket</button>
+      <button type="button" class="btn-primary" id="connect-ble" style="background:#4f46e5;">Connect Bluetooth (BLE)</button>
+    </div>
+    <div class="live-display">
+      Pitch: <span id="val-pitch">0.0</span>° | Roll: <span id="val-roll">0.0</span>°
+    </div>
   </fieldset>
 
-  <!-- Motion Stamp / ROM Capture Section -->
+  <!-- Motion Stamp & History -->
   <fieldset>
-    <legend>Motion Recording</legend>
+    <legend>Stamp Motion Record</legend>
     <div class="form-group">
-      <label for="motion-type">Motion Type:</label>
+      <label for="motion-type">Motion Type</label>
       <select id="motion-type">
-        <option value="Anterior Tilt">Anterior Tilt</option>
-        <option value="Posterior Tilt">Posterior Tilt</option>
+        <option value="Anterior Pelvic Tilt">Anterior Pelvic Tilt</option>
+        <option value="Posterior Pelvic Tilt">Posterior Pelvic Tilt</option>
         <option value="Lateral Tilt (Left)">Lateral Tilt (Left)</option>
         <option value="Lateral Tilt (Right)">Lateral Tilt (Right)</option>
-        <option value="Rotation (Left)">Rotation (Left)</option>
-        <option value="Rotation (Right)">Rotation (Right)</option>
+        <option value="Axial Rotation (Left)">Axial Rotation (Left)</option>
+        <option value="Axial Rotation (Right)">Axial Rotation (Right)</option>
       </select>
     </div>
-    <button type="button" id="stamp-btn">Stamp Motion Reading</button>
+    <button type="button" class="btn-primary" id="stamp-btn">Stamp Motion Reading</button>
 
     <table>
       <thead>
         <tr>
-          <th>Time</th>
+          <th>Timestamp</th>
           <th>Motion Type</th>
-          <th>Value</th>
+          <th>Pitch</th>
+          <th>Roll</th>
         </tr>
       </thead>
-      <tbody id="stamped-records"></tbody>
+      <tbody id="records-body"></tbody>
     </table>
+
+    <button type="button" class="btn-secondary" id="export-csv">Export Records to CSV</button>
   </fieldset>
 
   <script>
-    // 1. Auto-fill Date on Page Load
-    document.addEventListener('DOMContentLoaded', () => {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('date').value = today;
+    // 1. Detect Device from QR Query Param (?device=PRD-0001)
+    const urlParams = new URLSearchParams(window.location.search);
+    const deviceId = urlParams.get('device') || 'PRD-0001';
+    document.getElementById('device-badge').textContent = `Device: ${deviceId}`;
+
+    // 2. Set Auto Date & Time
+    const now = new Date();
+    document.getElementById('datetime').value = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let currentPitch = 0.0;
+    let currentRoll = 0.0;
+    const records = [];
+
+    // 3. Connect via WebSocket (ESP32 running WebSocket Server)
+    document.getElementById('connect-ws').addEventListener('click', () => {
+      const espIp = prompt("Enter ESP32 IP address (shown on ESP32 serial/display):", "192.168.4.1");
+      if (!espIp) return;
+
+      const ws = new WebSocket(`ws://${espIp}:81/`);
+      ws.onopen = () => {
+        document.getElementById('conn-status').textContent = `Connected (WS - ${deviceId})`;
+        document.getElementById('conn-status').style.color = '#16a34a';
+      };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          currentPitch = parseFloat(data.pitch || 0).toFixed(1);
+          currentRoll = parseFloat(data.roll || 0).toFixed(1);
+          document.getElementById('val-pitch').textContent = currentPitch;
+          document.getElementById('val-roll').textContent = currentRoll;
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      ws.onerror = () => alert("Could not connect to ESP32 WebSocket.");
     });
 
-    let currentAngle = 0; // Mock or live incoming sensor value
-
-    // 2. Connect Device via Web Bluetooth API (or Web Serial API)
-    document.getElementById('connect-btn').addEventListener('click', async () => {
+    // 4. Connect via Web Bluetooth (Optional BLE fallback)
+    document.getElementById('connect-ble').addEventListener('click', async () => {
       try {
-        if (!navigator.bluetooth) {
-          alert('Web Bluetooth is not supported on this browser. Try Chrome on Android, Windows, or Mac.');
-          return;
-        }
-
-        // Request BLE device (update service UUID to match your IMU / sensor module, e.g. MPU6050, BNO055)
         const device = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
-          optionalServices: ['battery_service'] // Replace with your sensor's custom service UUID
+          optionalServices: ['battery_service']
         });
-
-        const statusEl = document.getElementById('device-status');
-        statusEl.textContent = `Connected to ${device.name || 'Sensor'}`;
-        statusEl.style.color = '#008800';
-
-        // Example simulation of data feed if hardware characteristic is not yet wired:
-        setInterval(() => {
-          currentAngle = (Math.sin(Date.now() / 1000) * 30 + 15).toFixed(1);
-          document.getElementById('current-reading').textContent = currentAngle;
-        }, 100);
-
-      } catch (err) {
-        console.error('Connection failed:', err);
-        alert('Could not connect: ' + err.message);
+        document.getElementById('conn-status').textContent = `Connected (BLE - ${device.name || deviceId})`;
+        document.getElementById('conn-status').style.color = '#16a34a';
+      } catch (e) {
+        alert("BLE pairing cancelled or not supported.");
       }
     });
 
-    // 3. Stamp Motion
+    // 5. Stamp Current Motion
     document.getElementById('stamp-btn').addEventListener('click', () => {
-      const patientName = document.getElementById('name').value;
-      if (!patientName) {
-        alert('Please enter patient name before recording motion.');
+      const name = document.getElementById('name').value.trim();
+      if (!name) {
+        alert("Please enter the patient's name before stamping.");
         return;
       }
-
+      const timeStr = new Date().toLocaleTimeString();
       const motionType = document.getElementById('motion-type').value;
-      const timeStamp = new Date().toLocaleTimeString();
-      const recordTable = document.getElementById('stamped-records');
 
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${timeStamp}</td>
-        <td>${motionType}</td>
-        <td><strong>${currentAngle}°</strong></td>
-      `;
-      recordTable.prepend(row);
+      const record = {
+        time: timeStr,
+        motion: motionType,
+        pitch: currentPitch,
+        roll: currentRoll
+      };
+      records.push(record);
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${record.time}</td><td>${record.motion}</td><td>${record.pitch}°</td><td>${record.roll}°</td>`;
+      document.getElementById('records-body').prepend(tr);
+    });
+
+    // 6. Export to CSV (Includes Patient Metadata + Stamped Records)
+    document.getElementById('export-csv').addEventListener('click', () => {
+      if (records.length === 0) {
+        alert("No motion records stamped yet.");
+        return;
+      }
+      const name = document.getElementById('name').value.trim() || 'Unknown';
+      const gender = document.getElementById('gender').value || 'Unspecified';
+      const age = document.getElementById('age').value || 'N/A';
+      const date = document.getElementById('datetime').value;
+
+      let csv = "PATIENT INFORMATION\n";
+      csv += `Device ID,${deviceId}\nPatient Name,${name}\nGender,${gender}\nAge,${age}\nAssessment Date,${date}\n\n`;
+      csv += "MOTION RECORDS\nTimestamp,Motion Type,Pitch (deg),Roll (deg)\n";
+
+      records.forEach(r => {
+        csv += `"${r.time}","${r.motion}",${r.pitch},${r.roll}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `PelvicROM_${deviceId}_${name.replace(/\s+/g, '_')}.csv`;
+      a.click();
     });
   </script>
 </body>
